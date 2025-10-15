@@ -1,5 +1,5 @@
 # script to fetch weather data for Lehnitz from https://open-meteo.com/en/docs/historical-weather-api#data_sources
-# Breite 52.732462 Länge 13.258927
+# lat 52.732462 long 13.258927
 
 import requests
 from datetime import date, timedelta, datetime
@@ -10,13 +10,15 @@ import pandas as pd
 data_dir = pathlib.Path("data/raw")
 data_dir.mkdir(parents=True, exist_ok=True)
 
-latitude = 48.14
-longitude = 11.58
+latitude = 52.732462
+longitude = 13.258927
 
-# Zeitfenster (letzte 7 Tage)
+# Zeitfenster 
 end_date = date.today()
-start_date = end_date - timedelta(days=7)
+start_date = end_date - timedelta(days=120)
 
+
+# API abrufen
 url = (
     "https://archive-api.open-meteo.com/v1/archive?"
     f"latitude={latitude}&longitude={longitude}"
@@ -38,11 +40,9 @@ df = pd.DataFrame({
 
 print(df.head())
 
-
-
-
+# als json speichern
 timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-file_path = data_dir / f"data_{timestamp}.json"
+file_path = data_dir / f"weather_data.json"
 file_path.write_text(response.text, encoding="utf-8")
 
 print(f"✅ Data fetched and saved to {file_path}")
