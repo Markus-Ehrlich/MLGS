@@ -9,13 +9,13 @@ device = "cuda"
 
 # Daten laden 
 data_dir = pathlib.Path("data/raw")
-with open(data_dir + 'weather_data.jsonn') as f:
-    d = json.load(f)
+with open(data_dir / 'weather_data.json', 'r', encoding='utf-8') as f:
+    weatherData = json.load(f)
 
 # Daten aufteilen
-weatherData = d
+#weatherData = d
 X_train_full, X_test, y_train_full, y_test = train_test_split(
-    weatherData.data, weatherData.target, random_state=42)
+    weatherData["daily"]["temperature_2m_min"], weatherData["daily"]["temperature_2m_max"], random_state=42)
 X_train, X_valid, y_train, y_valid = train_test_split(
     X_train_full, y_train_full, random_state=42)
 
@@ -36,7 +36,7 @@ y_valid = torch.FloatTensor(y_valid).view(-1, 1)
 y_test = torch.FloatTensor(y_test).view(-1, 1)
 
 torch.manual_seed(42)
-n_features = X_train.shape[1]  # there are 8 input features
+n_features = X_train.shape[0]  # there are 8 input features
 w = torch.randn((n_features, 1), requires_grad=True)
 b = torch.tensor(0., requires_grad=True)
 
