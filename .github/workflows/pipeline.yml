@@ -43,6 +43,9 @@ jobs:
           git commit -m "Auto: data + model update $(date -u '+%Y-%m-%d %H:%M:%S')" || echo "No changes"
           git push
         # models/
+        
+      - name: Install mailutils
+        run: sudo apt-get update && sudo apt-get install -y mailutils
 
       - name: Job erfolgreich
         if: success()
