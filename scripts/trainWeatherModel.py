@@ -20,8 +20,7 @@ X_train_full, X_test, y_train_full, y_test = train_test_split(
 X_train, X_valid, y_train, y_valid = train_test_split(
     X_train_full, y_train_full, random_state=42)
 
-
-#
+# Modell für lineare Regression mit PyTorch
 X_train = torch.FloatTensor(X_train)
 X_valid = torch.FloatTensor(X_valid)
 X_test = torch.FloatTensor(X_test)
@@ -30,7 +29,6 @@ stds = X_train.std(dim=0, keepdims=True)
 X_train = (X_train - means) / stds
 X_valid = (X_valid - means) / stds
 X_test = (X_test - means) / stds
-
 
 y_train = torch.FloatTensor(y_train).view(-1, 1)
 y_valid = torch.FloatTensor(y_valid).view(-1, 1)
@@ -54,7 +52,5 @@ for epoch in range(n_epochs):
         w.grad.zero_()
     print(f"Epoch {epoch + 1}/{n_epochs}, Loss: {loss.item()}")
 
-
-torch.model = torch.nn.Linear(n_features, 1)
-weatherModel = torch.model
-torch.save(weatherModel, model_dir / "weatherModel.pth")
+# save model parameters
+torch.save({'w': w, 'b': b}, model_dir / 'weatherModelParameters.pth')
