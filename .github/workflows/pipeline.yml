@@ -2,7 +2,7 @@ name: Daily ML Pipeline Fetch and Train
 
 on:
   schedule:
-    - cron: '1 8 * * *'  # täglich um 18 Uhr UTC
+    - cron: '0 5 * * *'  # täglich um 17 Uhr UTC
   workflow_dispatch:
 
 permissions:
@@ -39,18 +39,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/raw/ 
+          git add data/raw/ models/
           git commit -m "Auto: data + model update $(date -u '+%Y-%m-%d %H:%M:%S')" || echo "No changes"
           git push
-        # models/
-        
-      - name: Install mailutils
-        run: sudo apt-get update && sudo apt-get install -y mailutils
 
-      - name: Job erfolgreich
-        if: success()
-        run: echo "Der Job wurde erfolgreich abgeschlossen!" | mail -s "Pipeline 'Daily ML Pipeline Fetch and Train' erfolgreich" markus.ehrlich1@gmx.de
-      
-      - name: Job fehlgeschlagen
-        if: failure()
-        run: echo "Der Job ist fehlgeschlagen!" | mail -s "Pipeline 'Daily ML Pipeline Fetch and Train' fehlgeschlagen" markus.ehrlich1@gmx.de
