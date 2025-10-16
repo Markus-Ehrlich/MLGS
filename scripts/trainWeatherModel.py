@@ -9,6 +9,7 @@ device = "cuda"
 
 # Daten laden 
 data_dir = pathlib.Path("data/raw")
+model_dir = pathlib.Path("models")
 with open(data_dir / 'weather_data.json', 'r', encoding='utf-8') as f:
     weatherData = json.load(f)
 
@@ -52,3 +53,8 @@ for epoch in range(n_epochs):
         b.grad.zero_()
         w.grad.zero_()
     print(f"Epoch {epoch + 1}/{n_epochs}, Loss: {loss.item()}")
+
+
+torch.model = torch.nn.Linear(n_features, 1)
+weatherModel = torch.model
+torch.save(weatherModel, model_dir / "weatherModel.pth")
