@@ -1,4 +1,8 @@
 requests
-scikit-learn
+sklearn
 joblib
 pandas
+torch
+datetime
+pathlib
+json
