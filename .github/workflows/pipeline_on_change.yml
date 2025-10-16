@@ -1,4 +1,4 @@
-name: Daily ML Pipeline Fetch and Train
+name: On Change Pipeline Train
 
 on:
   push:
