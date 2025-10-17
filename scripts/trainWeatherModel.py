@@ -1,6 +1,10 @@
-import torch
-import json
+from datetime import datetime
 import pathlib
+import subprocess
+import os
+import csv
+import json
+import torch
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_absolute_error
@@ -11,6 +15,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 # Daten laden
 data_dir = pathlib.Path("data/raw")
 model_dir = pathlib.Path("models")
+log_dir = pathlib.Path("logs")
+log_file = pathlib.Path(log_dir / 'modelTrainingLog.csv')
+
 with open(data_dir / 'weather_data.json', 'r', encoding='utf-8') as f:
     weatherData = json.load(f)
 
@@ -103,3 +110,21 @@ mae = mean_absolute_error(y_true, y_pred)
 print("\n📊 Modellbewertung:")
 print(f"R² Score: {r2:.3f}  → Modellgüte: {r2 * 100:.1f}%")
 print(f"MAE: {mae:.3f} °C (durchschnittlicher Fehler)")
+
+# Git commit ID der Datenbasis ermitteln
+try:
+    commit_id = subprocess.check_output(['git','rev-parse','HEAD'], cwd=data_dir.parent).decode().strip()
+except:
+    commit_id = "unknown"
+
+# Logging in CSV
+log_exists = log_file.exists()
+log_df = pd.DataFrame([{
+    "date": datetime.now().strftime("%Y-%m-%d"),
+    "time": datetime.now().strftime("%H:%M:%S"),
+    "data_commit_id": commit_id,
+    "r2_score": r2,
+    "MAE": mae
+}])
+
+log_df.to_csv(log_file, mode='a', header=not log_exists, index=False)
