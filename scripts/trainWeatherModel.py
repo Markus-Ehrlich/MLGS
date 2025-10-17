@@ -1,4 +1,3 @@
-import sklearn
 import torch
 import json
 import pathlib
@@ -14,7 +13,6 @@ with open(data_dir / 'weather_data.json', 'r', encoding='utf-8') as f:
     weatherData = json.load(f)
 
 # Daten aufteilen
-#weatherData = d
 X_train_full, X_test, y_train_full, y_test = train_test_split(
     weatherData["daily"]["temperature_2m_min"], weatherData["daily"]["temperature_2m_max"], random_state=42)
 X_train, X_valid, y_train, y_valid = train_test_split(
