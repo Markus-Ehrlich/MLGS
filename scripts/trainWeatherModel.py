@@ -5,16 +5,16 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_absolute_error
 
-# Hardwarebeschleunigung optional nutzen
+# Hardwarebeschleunigung nutzen, falls verfügbar
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# --- Daten laden ---
+# Daten laden
 data_dir = pathlib.Path("data/raw")
 model_dir = pathlib.Path("models")
 with open(data_dir / 'weather_data.json', 'r', encoding='utf-8') as f:
     weatherData = json.load(f)
 
-# --- In DataFrame umwandeln ---
+# In DataFrame umwandeln
 df = pd.DataFrame({
     "date": weatherData["daily"]["time"],
     "temp_max": weatherData["daily"]["temperature_2m_max"],
@@ -35,16 +35,16 @@ df = pd.DataFrame({
     "et0_fao_evapotranspiration": weatherData["daily"]["et0_fao_evapotranspiration"]
 })
 
-# --- Features (X) und Ziel (y) definieren ---
+# Features (X) und Ziel (y) definieren
 X = df.drop(columns=["date", "sunset", "sunrise", "weather_code", "temp_mean"])
 y = df["temp_mean"]
 
-# --- Datensatz aufteilen ---
+# Datensatz aufteilen
 X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 X_train, X_valid, y_train, y_valid = train_test_split(X_train_full, y_train_full, test_size=0.25, random_state=42)
 # Ergebnis: 60% Train, 20% Valid, 20% Test
 
-# --- In Torch-Tensoren umwandeln ---
+# In Torch-Tensoren umwandeln
 X_train = torch.tensor(X_train.values, dtype=torch.float32)
 X_valid = torch.tensor(X_valid.values, dtype=torch.float32)
 X_test = torch.tensor(X_test.values, dtype=torch.float32)
@@ -53,7 +53,7 @@ y_train = torch.tensor(y_train.values, dtype=torch.float32).view(-1, 1)
 y_valid = torch.tensor(y_valid.values, dtype=torch.float32).view(-1, 1)
 y_test = torch.tensor(y_test.values, dtype=torch.float32).view(-1, 1)
 
-# --- Normalisierung ---
+# Normalisierung
 means = X_train.mean(dim=0, keepdims=True)
 stds = X_train.std(dim=0, keepdims=True)
 stds[stds == 0] = 1e-6  # Schutz gegen Division durch 0
@@ -62,13 +62,13 @@ X_train = (X_train - means) / stds
 X_valid = (X_valid - means) / stds
 X_test = (X_test - means) / stds
 
-# --- Modellparameter ---
+# Modellparameter
 torch.manual_seed(42)
 n_features = X_train.shape[1]
 w = torch.randn((n_features, 1), requires_grad=True)
 b = torch.zeros(1, requires_grad=True)
 
-# --- Training ---
+# Training
 learning_rate = 0.01
 n_epochs = 200
 
@@ -86,15 +86,15 @@ for epoch in range(n_epochs):
     if (epoch + 1) % 20 == 0:
         print(f"Epoch {epoch + 1}/{n_epochs}, Loss: {loss.item():.4f}")
 
-# --- Modell speichern ---
+# Modell speichern 
 model_dir.mkdir(parents=True, exist_ok=True)
 torch.save({'w': w, 'b': b, 'means': means, 'stds': stds}, model_dir / 'weatherModelParameters.pth')
 
-# --- Evaluation ---
+# Evaluation
 with torch.no_grad():
     y_pred_test = X_test @ w + b
 
-# --- Metriken berechnen ---
+# Metriken berechnen
 y_true = y_test.numpy()
 y_pred = y_pred_test.numpy()
 r2 = r2_score(y_true, y_pred)
