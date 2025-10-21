@@ -5,7 +5,6 @@ import requests
 from datetime import date, timedelta, datetime
 import pathlib
 import pandas as pd
-import matplotlib.pyplot as plt
 
 # Ordner vorbereiten
 data_dir_raw = pathlib.Path("data/raw")
