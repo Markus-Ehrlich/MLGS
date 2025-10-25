@@ -2,7 +2,7 @@ name: Daily ML Pipeline Fetch and Train
 
 on:
   schedule:
-    - cron: '0 5 * * *'  # täglich um 17 Uhr UTC
+    - cron: '0 17 * * *'  # täglich um 17 Uhr UTC
   workflow_dispatch:
 
 permissions:
