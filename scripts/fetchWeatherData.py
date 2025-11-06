@@ -26,7 +26,7 @@ url = (
     "&daily=temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,sunset,sunrise,daylight_duration,sunshine_duration,rain_sum,snowfall_sum,precipitation_hours,weather_code,temperature_2m_mean,shortwave_radiation_sum,et0_fao_evapotranspiration"
 )
 
-response = requests.get(url)
+response = requests.get(url, timeout=10)
 data = response.json()
 
 # In DataFrame umwandeln

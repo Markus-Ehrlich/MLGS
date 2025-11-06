@@ -1,8 +1,6 @@
 from datetime import datetime
 import pathlib
 import subprocess
-#import os
-#import csv
 import json
 import torch
 import pandas as pd
@@ -12,12 +10,13 @@ from sklearn.metrics import r2_score, mean_absolute_error
 # Hardwarebeschleunigung nutzen, falls verfügbar
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Daten laden
+# Dateipfade
 data_dir = pathlib.Path("data/raw")
 model_dir = pathlib.Path("models")
 log_dir = pathlib.Path("logs")
 log_file = pathlib.Path(log_dir / 'modelTrainingLog.csv')
 
+# Daten laden
 with open(data_dir / 'weather_data.json', 'r', encoding='utf-8') as f:
     weatherData = json.load(f)
 
