@@ -31,6 +31,14 @@ jobs:
         run: |
           python scripts/fetchWeatherData.py
 
+      - name: Commit and Push Fetched and Processed Data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git commit -m "Auto: data update $(date -u '+%Y-%m-%d %H:%M:%S')" || echo "No changes"
+          git push
+
       - name: Train Model
         run: |
           python scripts/trainWeatherModel.py
@@ -39,7 +47,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/raw/ models/
+          git add models/ logs/
           git commit -m "Auto: data + model update $(date -u '+%Y-%m-%d %H:%M:%S')" || echo "No changes"
           git push
 
