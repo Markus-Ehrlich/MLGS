@@ -3,7 +3,7 @@ name: On Change Pipeline Train
 on:
   push:
     branches:
-      - main
+      - '*'
     paths:
       - "scripts/**"
   workflow_dispatch:
