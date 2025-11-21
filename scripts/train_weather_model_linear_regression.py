@@ -23,8 +23,16 @@ with open(data_dir / 'weather_data_processed.json', 'r', encoding='utf-8') as f:
     weatherData = json.load(f)
 
 # Define features and target
-X = pd.DataFrame(weatherData["features"])
-y = pd.DataFrame(weatherData["target"])
+X = pd.DataFrame(
+    index = weatherData["features"]["index"],
+    columns = weatherData["features"]["columns"],
+    data = weatherData["features"]["data"]
+)
+y = pd.DataFrame(
+    index = weatherData["target"]["index"],
+    columns = weatherData["target"]["columns"],
+    data = weatherData["target"]["data"]
+)
 
 # Split data into training, validation, and test sets
 X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.2, random_state=42)

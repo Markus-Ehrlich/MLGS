@@ -47,6 +47,8 @@ print(df_raw.head())
 # Split data frame into features and target
 # Drop date and target
 df_features = df_raw.drop(columns=["date", "temp_mean"])
+# temporary workaround: Numerical values must be dropped until they have been processes properly
+df_features = df_features.drop(columns=["sunset", "sunrise", "weather_code"])
 
 # Features for the last available day to predict next day
 df_features_for_tomorrow = df_features.iloc[[-1]]
