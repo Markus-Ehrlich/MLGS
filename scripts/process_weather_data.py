@@ -55,7 +55,8 @@ df_features_for_tomorrow = df_features.iloc[[-1]]
 df_features = df_features.drop(df_features.index[-1])
 
 # Target is next day's mean temperature
-df_target = df_raw["temp_mean"].shift(-1)  
+df_target = df_raw["temp_mean"].shift(-1).to_frame()
+df_target = df_target.dropna()
 
 # Save processed data
 processed_data = {
