@@ -31,6 +31,8 @@ jobs:
         run: |
           python scripts/fetch_weather_data.py
 
+      # separate step to commit fetched data before processing to log via commit ID ...
+      # what data the model has been trained on
       - name: Commit and Push Fetched and Processed Data
         run: |
           git config user.name "github-actions[bot]"
@@ -39,15 +41,19 @@ jobs:
           git commit -m "Auto: data update $(date -u '+%Y-%m-%d %H:%M:%S')" || echo "No changes"
           git push
 
+      - name: Process External Data
+        run: |
+          python scripts/process_weather_data.py
+
       - name: Train Model
         run: |
-          python scripts/trainWeatherModel.py
+          python scripts/train_weather_model_linear_regression.py
 
       - name: Commit and Push Artifacts
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add models/ logs/
-          git commit -m "Auto: data + model update $(date -u '+%Y-%m-%d %H:%M:%S')" || echo "No changes"
+          git add models/ logs/ data/processed/
+          git commit -m "Auto: processed data + model update $(date -u '+%Y-%m-%d %H:%M:%S')" || echo "No changes"
           git push
 
