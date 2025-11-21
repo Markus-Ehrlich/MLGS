@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_absolute_error
 
 # Hardwarebeschleunigung nutzen, falls verfügbar
-device = "cuda" if torch.cuda.is_available() else "cpu"
+trainingDevice = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Dateipfade
 data_dir = pathlib.Path("data/raw")
@@ -106,7 +106,7 @@ y_pred = y_pred_test.numpy()
 r2 = r2_score(y_true, y_pred)
 mae = mean_absolute_error(y_true, y_pred)
 
-print("\n📊 Modellbewertung:")
+print("\n Modellbewertung:")
 print(f"R² Score: {r2:.3f}  → Modellgüte: {r2 * 100:.1f}%")
 print(f"MAE: {mae:.3f} °C (durchschnittlicher Fehler)")
 
