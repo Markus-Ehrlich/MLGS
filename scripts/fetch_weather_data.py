@@ -6,17 +6,20 @@ from datetime import date, timedelta, datetime
 import pathlib
 import requests
 
+# Configuration parameters
+YEARS_REGARDED = 3
+LATITUDE = 52.732462
+LONGITUDE = 13.258927
+
 # Prepare folder
 DATA_DIR_RAW = pathlib.Path("data/raw")
 DATA_DIR_RAW.mkdir(parents=True, exist_ok=True)
 
-LATITUDE = 52.732462
-LONGITUDE = 13.258927
+
 
 # Define time range
 END_DATE = date.today()
-START_DATE = END_DATE - timedelta(days=60)
-
+START_DATE = END_DATE - timedelta(days=365*YEARS_REGARDED)
 
 # API call
 APIURL = (
