@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 # Paths definition
 DATA_DIR_RAW = pathlib.Path("data/raw")
