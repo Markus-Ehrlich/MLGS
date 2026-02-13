@@ -3,6 +3,7 @@
 import pathlib
 import json
 import pandas as pd
+import numpy as np
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 
@@ -98,7 +99,6 @@ df_encoded_weather_code = pd.DataFrame(
         df_features_num_imputed[["weather_code"]].columns
     )
 )
-
 # Append encoded weather code features and drop original column
 df_features_num_imputed = pd.concat(
     [df_features_num_imputed, df_encoded_weather_code], axis=1
@@ -111,13 +111,17 @@ df_features_obj_imputed.drop(columns=["date"], inplace=True)
 # temporary workaround: Object values must be dropped until they have been processes properly
 df_features_obj_imputed.drop(columns=["sunset", "sunrise"], inplace=True) 
 
-# Scaling
+# Scaling and conditioning
 # precipitation_sum
+# Log transformation to reduce skewness
+df_features_num_imputed["precipitation_sum_log"]= np.log1p(
+    df_features_num_imputed["precipitation_sum"])
+# Then Standard scaling
 standard_scaler = StandardScaler()
 df_features_num_imputed["precipitation_sum_scaled"] = standard_scaler.fit_transform(
-    df_features_num_imputed[["precipitation_sum"]]
+    df_features_num_imputed[["precipitation_sum_log"]]
 )
-df_features_num_imputed.drop(columns=["precipitation_sum"])
+df_features_num_imputed.drop(columns=["precipitation_sum", "precipitation_sum_log"], inplace=True)
 
 # Placeholder for value conditioning, normalization etc.
 
