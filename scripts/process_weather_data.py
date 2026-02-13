@@ -1,4 +1,13 @@
-"""Process fetched weather data to make it ready for model training."""
+"""Process fetched weather data to make it ready for model training.
+
+This script performs the following steps:
+1. Loads raw weather data from a JSON file.
+2. Imputes missing values for numerical and categorical features.
+3. Creates new features (e.g., combined precipitation sum, one-hot encoding of weather code).
+4. Scales and conditions numerical features (e.g., log transformation and standard scaling of precipitation sum).
+5. Formats the data into a structured format suitable for model training, including separating features and target variable.
+6. Saves the processed data to a new JSON file for use in model training.
+"""
 
 import pathlib
 import json
@@ -55,14 +64,14 @@ print(df_raw.describe())
 print(df_raw.isnull().sum())
 print(len(df_raw["temp_max"]))
 
-# Clean the data
-# Create intermediate features dataframe
+# Create intermediate features dataframe, separately for numerical and object features ...
+# ... for easier processing
 # All numerical features
 df_features_num: pd.DataFrame = df_raw.select_dtypes(include=["number"]).copy()
 # All object features
 df_features_obj: pd.DataFrame = df_raw.select_dtypes(exclude=["number"]).copy()
 # Drop date column
-df_features_obj.drop(columns=["date"]).copy()
+df_features_obj.drop(columns=["date"], inplace=True)
 
 # Impute missing values
 # Numerical features: fill with median
@@ -72,7 +81,6 @@ X = imputer.transform(df_features_num)
 df_features_num_imputed = pd.DataFrame(
     X, columns=df_features_num.columns, index=df_features_num.index
 )
-
 # Object features: fill with 'unknown'
 imputer_obj = SimpleImputer(strategy="constant", fill_value="unknown")
 imputer_obj.fit(df_features_obj)
@@ -105,11 +113,26 @@ df_features_num_imputed = pd.concat(
 )
 df_features_num_imputed.drop(columns=["weather_code"], inplace=True)
 
+# Wind direction dominant: convert to sine and cosine components
+df_features_num_imputed["wind_dir_sin"] = np.sin(np.deg2rad(
+    df_features_num_imputed["wind_direction_dominant"]))
+df_features_num_imputed["wind_dir_cos"] = np.cos(np.deg2rad(
+    df_features_num_imputed["wind_direction_dominant"]))
+df_features_num_imputed.drop(columns=["wind_direction_dominant"], inplace=True)
+# Then Standard scaling (not in place here, but i do not want to split the treatment of ...
+# ... single features, needs to be tidied up yet)
+standard_scaler = StandardScaler()
+df_features_num_imputed["wind_dir_sin_scaled"] = standard_scaler.fit_transform(
+    df_features_num_imputed[["wind_dir_sin"]]
+)
+df_features_num_imputed["wind_dir_cos_scaled"] = standard_scaler.fit_transform(
+    df_features_num_imputed[["wind_dir_cos"]]
+)
+df_features_num_imputed.drop(columns=["wind_dir_sin", "wind_dir_sin"], inplace=True)
+
 # Object features
-# drop date
-df_features_obj_imputed.drop(columns=["date"], inplace=True)
 # temporary workaround: Object values must be dropped until they have been processes properly
-df_features_obj_imputed.drop(columns=["sunset", "sunrise"], inplace=True) 
+df_features_obj_imputed.drop(columns=["sunset", "sunrise"], inplace=True)
 
 # Scaling and conditioning
 # precipitation_sum
@@ -117,11 +140,26 @@ df_features_obj_imputed.drop(columns=["sunset", "sunrise"], inplace=True)
 df_features_num_imputed["precipitation_sum_log"]= np.log1p(
     df_features_num_imputed["precipitation_sum"])
 # Then Standard scaling
-standard_scaler = StandardScaler()
 df_features_num_imputed["precipitation_sum_scaled"] = standard_scaler.fit_transform(
     df_features_num_imputed[["precipitation_sum_log"]]
 )
+# Drop 'raw' data
 df_features_num_imputed.drop(columns=["precipitation_sum", "precipitation_sum_log"], inplace=True)
+
+# et0_fao_evapotranspiration
+# Log transformation to reduce skewness
+df_features_num_imputed["et0_fao_evapotranspiration_log"]= np.log1p(
+    df_features_num_imputed["et0_fao_evapotranspiration"])
+# Then Standard scaling
+df_features_num_imputed["et0_fao_evapotranspiration_scaled"] = standard_scaler.fit_transform(
+    df_features_num_imputed[["et0_fao_evapotranspiration_log"]]
+)
+# Drop 'raw' data
+df_features_num_imputed.drop(columns=["et0_fao_evapotranspiration",
+                                      "et0_fao_evapotranspiration_log"], inplace=True)
+
+
+
 
 # Placeholder for value conditioning, normalization etc.
 
