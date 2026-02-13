@@ -13,6 +13,7 @@ import pathlib
 import json
 import pandas as pd
 import numpy as np
+from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 
@@ -128,7 +129,7 @@ df_features_num_imputed["wind_dir_sin_scaled"] = standard_scaler.fit_transform(
 df_features_num_imputed["wind_dir_cos_scaled"] = standard_scaler.fit_transform(
     df_features_num_imputed[["wind_dir_cos"]]
 )
-df_features_num_imputed.drop(columns=["wind_dir_sin", "wind_dir_sin"], inplace=True)
+df_features_num_imputed.drop(columns=["wind_dir_sin", "wind_dir_cos"], inplace=True)
 
 # Object features
 # temporary workaround: Object values must be dropped until they have been processes properly
@@ -158,16 +159,31 @@ df_features_num_imputed["et0_fao_evapotranspiration_scaled"] = standard_scaler.f
 df_features_num_imputed.drop(columns=["et0_fao_evapotranspiration",
                                       "et0_fao_evapotranspiration_log"], inplace=True)
 
+# Scaling of other numerical features (except for the ones already scaled)
+# List of features to be scaled (excluding already manually scaled ones)
+scale_features = [
+    "temp_max", "temp_min", "temp_mean", "wind_speed_max", "wind_gusts_max", "daylight_duration",
+    "sunshine_duration", "precipitation_hours", "shortwave_radiation_sum"]
 
-
-
-# Placeholder for value conditioning, normalization etc.
-
-# ##################################
-# ##################################
+# Define Pipeline for scaling numerical features
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("scaled", StandardScaler(), scale_features)
+    ],
+    remainder="passthrough"
+)
+X_processed = preprocessor.fit_transform(df_features_num_imputed)
+X_processed_df = pd.DataFrame(
+    X_processed,
+    columns=preprocessor.get_feature_names_out()
+)
 
 # Combine processed numerical and object features
 df_features = pd.concat([df_features_num_imputed, df_features_obj_imputed], axis=1)
+# temporary workaround to add incomplete pipeline output
+df_features.drop(columns=["temp_max", "temp_min", "temp_mean", "wind_speed_max", "wind_gusts_max", "daylight_duration",
+    "sunshine_duration", "precipitation_hours", "shortwave_radiation_sum"], inplace=True)
+df_features = pd.concat([X_processed_df], axis=1)
 
 # Features for the last available day to predict next day
 # I am not so sure yet, if this will be needed
