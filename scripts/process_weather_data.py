@@ -4,8 +4,10 @@ This script performs the following steps:
 1. Loads raw weather data from a JSON file.
 2. Imputes missing values for numerical and categorical features.
 3. Creates new features (e.g., combined precipitation sum, one-hot encoding of weather code).
-4. Scales and conditions numerical features (e.g., log transformation and standard scaling of precipitation sum).
-5. Formats the data into a structured format suitable for model training, including separating features and target variable.
+4. Scales and conditions numerical features (e.g., log transformation and standard scaling
+of precipitation sum).
+5. Formats the data into a structured format suitable for model training, including 
+separating features and target variable.
 6. Saves the processed data to a new JSON file for use in model training.
 """
 
@@ -14,17 +16,14 @@ import json
 import pandas as pd
 import numpy as np
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, FunctionTransformer
 from sklearn.impute import SimpleImputer
-
-
-#import matplotlib.pyplot as plt
 
 # Paths definition
 DATA_DIR_RAW = pathlib.Path("data/raw")
 DATA_DIR_PROCESSED = pathlib.Path("data/processed")
 DATA_DIR_PROCESSED.mkdir(parents=True, exist_ok=True)
-
 
 # Open raw data file
 with open(DATA_DIR_RAW / "weather_data.json", "r", encoding="utf-8") as f:
@@ -65,138 +64,95 @@ print(df_raw.describe())
 print(df_raw.isnull().sum())
 print(len(df_raw["temp_max"]))
 
-# Create intermediate features dataframe, separately for numerical and object features ...
-# ... for easier processing
-# All numerical features
-df_features_num: pd.DataFrame = df_raw.select_dtypes(include=["number"]).copy()
-# All object features
-df_features_obj: pd.DataFrame = df_raw.select_dtypes(exclude=["number"]).copy()
-# Drop date column
-df_features_obj.drop(columns=["date"], inplace=True)
-
-# Impute missing values
-# Numerical features: fill with median
-imputer = SimpleImputer(strategy="median")
-imputer.fit(df_features_num)
-X = imputer.transform(df_features_num)
-df_features_num_imputed = pd.DataFrame(
-    X, columns=df_features_num.columns, index=df_features_num.index
-)
-# Object features: fill with 'unknown'
-imputer_obj = SimpleImputer(strategy="constant", fill_value="unknown")
-imputer_obj.fit(df_features_obj)
-X_obj = imputer_obj.transform(df_features_obj)
-df_features_obj_imputed = pd.DataFrame(
-    X_obj, columns=df_features_obj.columns, index=df_features_obj.index
-)
-
-# Process features physicallywise
-# Numerical features
+# Feature engineering
+df_processing = df_raw.copy()
 # Create combined precipitation sum feature and drop individual ones
-df_features_num_imputed["precipitation_sum"] = (
-    df_features_num_imputed["rain_sum"] + df_features_num_imputed["snowfall_sum"]
+df_processing["precipitation_sum"] = (
+    df_processing["rain_sum"] + df_processing["snowfall_sum"]
 )
-df_features_num_imputed.drop(columns=["rain_sum", "snowfall_sum"], inplace=True)
+# Drop input values
+df_processing.drop(columns=["rain_sum", "snowfall_sum"], inplace=True)
 
-# Weather code: one-hot encoding
-encoder = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
-encoded_weather_code = encoder.fit_transform(
-    df_features_num_imputed[["weather_code"]]
-)
-df_encoded_weather_code = pd.DataFrame(
-    encoded_weather_code, columns=encoder.get_feature_names_out(
-        df_features_num_imputed[["weather_code"]].columns
-    )
-)
-# Append encoded weather code features and drop original column
-df_features_num_imputed = pd.concat(
-    [df_features_num_imputed, df_encoded_weather_code], axis=1
-)
-df_features_num_imputed.drop(columns=["weather_code"], inplace=True)
+# Convert wind direction to sine and cosine components
+df_processing["wind_dir_sin"] = np.sin(np.deg2rad(
+    df_processing["wind_direction_dominant"]))
+df_processing["wind_dir_cos"] = np.cos(np.deg2rad(
+    df_processing["wind_direction_dominant"]))
+# Drop input values
+df_processing.drop(columns=["wind_direction_dominant"], inplace=True)
 
-# Wind direction dominant: convert to sine and cosine components
-df_features_num_imputed["wind_dir_sin"] = np.sin(np.deg2rad(
-    df_features_num_imputed["wind_direction_dominant"]))
-df_features_num_imputed["wind_dir_cos"] = np.cos(np.deg2rad(
-    df_features_num_imputed["wind_direction_dominant"]))
-df_features_num_imputed.drop(columns=["wind_direction_dominant"], inplace=True)
-# Then Standard scaling (not in place here, but i do not want to split the treatment of ...
-# ... single features, needs to be tidied up yet)
-standard_scaler = StandardScaler()
-df_features_num_imputed["wind_dir_sin_scaled"] = standard_scaler.fit_transform(
-    df_features_num_imputed[["wind_dir_sin"]]
-)
-df_features_num_imputed["wind_dir_cos_scaled"] = standard_scaler.fit_transform(
-    df_features_num_imputed[["wind_dir_cos"]]
-)
-df_features_num_imputed.drop(columns=["wind_dir_sin", "wind_dir_cos"], inplace=True)
+# Drop unused attributes for now, as they are not useful (yet)
+df_processing.drop(columns=["date", "sunset", "sunrise"], inplace=True)
 
-# Object features
-# temporary workaround: Object values must be dropped until they have been processes properly
-df_features_obj_imputed.drop(columns=["sunset", "sunrise"], inplace=True)
+# Verify columns in df_raw before applying the pipeline
+print("Columns in df_raw before pipeline:")
+print(df_processing.columns)
 
-# Scaling and conditioning
-# precipitation_sum
-# Log transformation to reduce skewness
-df_features_num_imputed["precipitation_sum_log"]= np.log1p(
-    df_features_num_imputed["precipitation_sum"])
-# Then Standard scaling
-df_features_num_imputed["precipitation_sum_scaled"] = standard_scaler.fit_transform(
-    df_features_num_imputed[["precipitation_sum_log"]]
+# Define attribute categories for pipeline processing
+# Right now, no categorical attributes are used
+# Numerical attributes that require log transformation due to skewness
+log_attributes = ["et0_fao_evapotranspiration", "precipitation_sum"]
+
+# Categorical attributes that require one-hot encoding (it is officially numerical)
+onehot_attributes = ["weather_code"]
+
+# Sort leftover attributes input into generic numeric group
+all_numeric = df_processing.select_dtypes(include=["number"]).columns.tolist()
+# already used numeric attributes in the lists above
+used_numeric = (
+    log_attributes
+    + onehot_attributes
 )
-# Drop 'raw' data
-df_features_num_imputed.drop(columns=["precipitation_sum", "precipitation_sum_log"], inplace=True)
+# Only list numerical attributes that are not already used in the above pipelines
+num_attributes = [col for col in all_numeric if col not in used_numeric]
 
-# et0_fao_evapotranspiration
-# Log transformation to reduce skewness
-df_features_num_imputed["et0_fao_evapotranspiration_log"]= np.log1p(
-    df_features_num_imputed["et0_fao_evapotranspiration"])
-# Then Standard scaling
-df_features_num_imputed["et0_fao_evapotranspiration_scaled"] = standard_scaler.fit_transform(
-    df_features_num_imputed[["et0_fao_evapotranspiration_log"]]
+# Pipeline for log transformation of skewed features: imputation, log transformation, and scaling
+log_pipeline = Pipeline([
+    ("impute", SimpleImputer(strategy="median")),  # Handle missing values
+    ("log_transform", FunctionTransformer(np.log1p, validate=False, 
+                                          feature_names_out="one-to-one")),  # Log transformation
+    ("scale", StandardScaler())  # Standard scaling
+])
+
+# Standard pipeline for numerical features: imputation with median and standard scaling
+numerical_pipeline = Pipeline([
+    ("impute", SimpleImputer(strategy="median")),
+    ("standardize", StandardScaler())
+])
+
+# Pipeline for categorical features: imputation with 'unknown' and one-hot encoding
+onehot_pipeline = Pipeline([
+    ("impute", SimpleImputer(strategy="constant", fill_value=0)),
+    ("onehot", OneHotEncoder(sparse_output=False, handle_unknown="ignore"))
+])
+
+# Combine pipelines into a ColumnTransformer
+preprocessing_pipeline = ColumnTransformer([
+    ("log_transform", log_pipeline, log_attributes),
+    ("cat", onehot_pipeline, onehot_attributes),
+    ("num", numerical_pipeline, num_attributes)
+])
+
+# Carry out the preprocessing pipeline on the raw data
+df_preprocessed = preprocessing_pipeline.fit_transform(df_processing)
+# Transform the preprocessed data back into a DataFrame with appropriate column names
+feature_names = preprocessing_pipeline.get_feature_names_out()
+df_preprocessed = pd.DataFrame(
+    df_preprocessed,
+    columns=feature_names,
+    index=df_processing.index
 )
-# Drop 'raw' data
-df_features_num_imputed.drop(columns=["et0_fao_evapotranspiration",
-                                      "et0_fao_evapotranspiration_log"], inplace=True)
-
-# Scaling of other numerical features (except for the ones already scaled)
-# List of features to be scaled (excluding already manually scaled ones)
-scale_features = [
-    "temp_max", "temp_min", "temp_mean", "wind_speed_max", "wind_gusts_max", "daylight_duration",
-    "sunshine_duration", "precipitation_hours", "shortwave_radiation_sum"]
-
-# Define Pipeline for scaling numerical features
-preprocessor = ColumnTransformer(
-    transformers=[
-        ("scaled", StandardScaler(), scale_features)
-    ],
-    remainder="passthrough"
-)
-X_processed = preprocessor.fit_transform(df_features_num_imputed)
-X_processed_df = pd.DataFrame(
-    X_processed,
-    columns=preprocessor.get_feature_names_out()
-)
-
-# Combine processed numerical and object features
-df_features = pd.concat([df_features_num_imputed, df_features_obj_imputed], axis=1)
-# temporary workaround to add incomplete pipeline output
-df_features.drop(columns=["temp_max", "temp_min", "temp_mean", "wind_speed_max", "wind_gusts_max", "daylight_duration",
-    "sunshine_duration", "precipitation_hours", "shortwave_radiation_sum"], inplace=True)
-df_features = pd.concat([X_processed_df], axis=1)
 
 # Features for the last available day to predict next day
 # I am not so sure yet, if this will be needed
-df_features_for_tomorrow = df_features.iloc[[-1]]  # not used yet
+df_features_for_tomorrow = df_preprocessed.iloc[[-1]]  # not used yet
 
 # Delete last row from features dataframe to align with target
-df_features = df_features.drop(df_features.index[-1])
+df_features = df_preprocessed.drop(df_preprocessed.index[-1])
 
 # Select target (next day's max temperature)
 df_target = df_raw["temp_max"].shift(-1).to_frame()
 df_target = df_target.dropna()
-
-
 
 # Print overview of processed data
 print("Processed feature data:")
